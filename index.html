@@ -5,61 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RoseLook</title>
   <style>
-    /* A soft, Valentine's Day inspired gradient background */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      /* Soft, bright gradient green background */
+      background: linear-gradient(135deg, #a8e063, #56ab2f);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     canvas {
       display: block;
     }
-    /* Optional header to display a title */
-#header {
-  position: absolute;
-  top: 20%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 3em;
-  color: #ffffff;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-  pointer-events: none;
-}
-#text-area {
+    /* Optional header displaying the site name */
+    #header {
       position: absolute;
-      top: 40%;
+      top: 10%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 2em;
+      font-size: 3em;
       color: #ffffff;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       pointer-events: none;
     }
-#text-area2 {
-      position: absolute;
-      top: 60%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 2em;
-      color: #ffffff;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-      pointer-events: none;
-    }
-
   </style>
 </head>
 <body>
   <div id="header">RoseLook</div>
-  <div id="text-area">I'm very sorry</div>
-  <div id="text-area2">Can we talk?</div>
   <canvas id="canvas"></canvas>
   <script>
+    // === CONFIGURATION PARAMETERS ===
+    const CONFIG = {
+      numRoses: 10,
+      minRadius: 30,
+      maxRadius: 80,
+      minPetals: 3,
+      maxPetals: 5,  // integer petals (if even, rose has 2k petals; if odd, k petals)
+      minRotationSpeed: 0.002,
+      maxRotationSpeed: 0.01,
+      minDriftSpeed: 0.2,
+      maxDriftSpeed: 1,
+      totalRosePoints: 1000, // number of points used to draw the rose curve
+      // The gradient for the background can be adjusted via CSS in the style tag.
+    };
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Set canvas size to full window
+    // Resize canvas to full window size
     function resize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -67,88 +59,94 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Define a set of Valentine colors
-    const colors = ['#ff6b81', '#ff4757', '#ffa502', '#ff6348'];
+    /**
+     * Draws a rose curve using polar coordinates.
+     *
+     * @param {number} centerX - X coordinate of the rose center.
+     * @param {number} centerY - Y coordinate of the rose center.
+     * @param {number} petals - Parameter 'k' affecting the number of petals.
+     * @param {number} radius - Scaling factor for the rose.
+     * @param {number} rotation - Rotation offset in radians.
+     * @param {string} color - Stroke color for the rose.
+     */
+    function drawRose(centerX, centerY, petals, radius, rotation, color) {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotation);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
 
-    // Heart object for the animation
-    class Heart {
-      constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = canvas.height + Math.random() * canvas.height;
-        this.size = 20 + Math.random() * 30;
-        this.speed = 0.5 + Math.random() * 1.5;
-        this.rotation = Math.random() * Math.PI * 2;
-        this.rotationSpeed = -0.02 + Math.random() * 0.04;
-        this.alpha = 0.7 + Math.random() * 0.3;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-      }
-      update() {
-        this.y -= this.speed;
-        this.rotation += this.rotationSpeed;
-        if (this.y < -this.size) {
-          this.reset();
+      for (let i = 0; i <= CONFIG.totalRosePoints; i++) {
+        const theta = (i / CONFIG.totalRosePoints) * 2 * Math.PI;
+        // Rose curve: r = radius * cos(petals * theta)
+        const r = radius * Math.cos(petals * theta);
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
         }
       }
-      draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        drawHeartShape(ctx, 0, 0, this.size);
-        ctx.restore();
-      }
-    }
-
-    // Draw a heart shape using bezier curves
-    function drawHeartShape(ctx, x, y, size) {
-      ctx.beginPath();
-      const topCurveHeight = size * 0.3;
-      ctx.moveTo(x, y + topCurveHeight);
-      // Left side of heart
-      ctx.bezierCurveTo(
-        x, y,
-        x - size / 2, y,
-        x - size / 2, y + topCurveHeight
-      );
-      // Bottom left
-      ctx.bezierCurveTo(
-        x - size / 2, y + (size + topCurveHeight) / 2,
-        x, y + (size + topCurveHeight) / 2,
-        x, y + size
-      );
-      // Bottom right
-      ctx.bezierCurveTo(
-        x, y + (size + topCurveHeight) / 2,
-        x + size / 2, y + (size + topCurveHeight) / 2,
-        x + size / 2, y + topCurveHeight
-      );
-      // Right side of heart
-      ctx.bezierCurveTo(
-        x + size / 2, y,
-        x, y,
-        x, y + topCurveHeight
-      );
       ctx.closePath();
-      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // Create multiple hearts
-    const hearts = [];
-    const heartCount = 50;
-    for (let i = 0; i < heartCount; i++) {
-      hearts.push(new Heart());
+    // Create an array to store rose objects with random movement parameters.
+    const roses = [];
+    for (let i = 0; i < CONFIG.numRoses; i++) {
+      // Random starting position
+      const centerX = Math.random() * canvas.width;
+      const centerY = Math.random() * canvas.height;
+      // Random petals count between min and max (rounded to integer)
+      const petals = Math.floor(Math.random() * (CONFIG.maxPetals - CONFIG.minPetals + 1)) + CONFIG.minPetals;
+      // Random radius
+      const radius = CONFIG.minRadius + Math.random() * (CONFIG.maxRadius - CONFIG.minRadius);
+      // Random initial rotation angle
+      const rotation = Math.random() * Math.PI * 2;
+      // Random rotation speed (could be negative for counter-clockwise motion)
+      const rotationSpeed = (Math.random() * (CONFIG.maxRotationSpeed - CONFIG.minRotationSpeed) + CONFIG.minRotationSpeed) * (Math.random() < 0.5 ? -1 : 1);
+      // Random drift: choose a random angle and speed for the movement
+      const driftAngle = Math.random() * Math.PI * 2;
+      const driftSpeed = CONFIG.minDriftSpeed + Math.random() * (CONFIG.maxDriftSpeed - CONFIG.minDriftSpeed);
+      const vx = driftSpeed * Math.cos(driftAngle);
+      const vy = driftSpeed * Math.sin(driftAngle);
+      // Generate a random vibrant color using HSL
+      const color = `hsl(${Math.random() * 360}, 80%, 60%)`;
+
+      roses.push({
+        centerX,
+        centerY,
+        petals,
+        radius,
+        rotation,
+        rotationSpeed,
+        vx,
+        vy,
+        color
+      });
     }
 
-    // Animation loop to update and draw hearts
+    // Animation loop: update position and rotation for each rose
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      hearts.forEach(heart => {
-        heart.update();
-        heart.draw(ctx);
+      roses.forEach(rose => {
+        // Update rotation
+        rose.rotation += rose.rotationSpeed;
+        // Update position with unique drift
+        rose.centerX += rose.vx;
+        rose.centerY += rose.vy;
+
+        // Wrap around canvas edges for continuous motion
+        if (rose.centerX > canvas.width) rose.centerX = 0;
+        if (rose.centerX < 0) rose.centerX = canvas.width;
+        if (rose.centerY > canvas.height) rose.centerY = 0;
+        if (rose.centerY < 0) rose.centerY = canvas.height;
+
+        // Draw the rose curve at its current position and rotation
+        drawRose(rose.centerX, rose.centerY, rose.petals, rose.radius, rose.rotation, rose.color);
       });
       requestAnimationFrame(animate);
     }
